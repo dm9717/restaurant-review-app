@@ -16,7 +16,7 @@ export const getShops = async () => {
         // .where('score', '>', 3)
         .orderBy('score', 'desc')
         .get();
-    const shops = snapshot.docs.map((doc) => doc.data());
+    const shops = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
     return shops;
 };
 
@@ -45,4 +45,8 @@ export const signin = async () => {
 
 export const updateUser = async (userId, params) => {
     await firebase.firestore().collection('users').doc(userId).update(params);
+};
+
+export const addReview = async (shopId, review) => {
+    await firebase.firestore().collection('shops').doc(shopId).collection('reviews').add(review);
 };
