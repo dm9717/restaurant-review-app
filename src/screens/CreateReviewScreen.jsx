@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { StyleSheet, SafeAreaView, Text, View, Image } from 'react-native';
+import { StyleSheet, SafeAreaView, Text, View, Image, Alert, ScrollView } from 'react-native';
 import { IconButton } from '../components/IconButton';
 import { TextArea } from '../components/TextArea';
 import { StarInput } from '../components/StarInput';
 import { Button } from '../components/Button';
-import { addReview } from '../lib/firebase';
+import { createReviewRef, uploadImage } from '../lib/firebase';
 import { UserContext } from '../contexts/userContext';
-import firebase from 'firebase';
+import firebase, { storage } from 'firebase';
 import { pickImage } from '../lib/image-picker';
+import { getExtension } from '../utils/file';
+import { Loading } from '../components/Loading';
 
 export const CreateReviewScreen = ({ navigation, route }) => {
     const { shop } = route.params;
@@ -15,6 +17,7 @@ export const CreateReviewScreen = ({ navigation, route }) => {
     const [text, setText] = useState('');
     const [score, setScore] = useState(3);
     const [imageUri, setImageUri] = useState('');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         navigation.setOptions({
@@ -24,6 +27,22 @@ export const CreateReviewScreen = ({ navigation, route }) => {
     }, [shop]);
 
     const onSubmit = async () => {
+        if (!text || !imageUri) {
+            Alert.alert("The review is empty or you haven't uploaded an image.");
+            return;
+        }
+
+        setLoading(true);
+
+        // Get the ID of the document
+        const reviewDocRef = await createReviewRef(shop.id);
+        // Set the path of an image on Cloud Storage
+        const ext = getExtension(imageUri);
+        const storagePath = `reviews/${reviewDocRef.id}.${ext}`;
+        // Upload the image to Cloud Storage
+        const donwloadUrl = await uploadImage(imageUri, storagePath);
+        // Make a Review document
+
         const review = {
             user: {
                 name: user.name,
@@ -35,10 +54,13 @@ export const CreateReviewScreen = ({ navigation, route }) => {
             },
             text,
             score,
+            imageUrl: donwloadUrl,
             updatedAt: firebase.firestore.Timestamp.now(),
             createdAt: firebase.firestore.Timestamp.now(),
         };
-        await addReview(shop.id, review);
+        await reviewDocRef.set(review);
+        setLoading(false);
+        navigation.goBack();
     };
 
     const onPickImage = async () => {
@@ -48,18 +70,21 @@ export const CreateReviewScreen = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StarInput score={score} onChangeScore={(value) => setScore(value)} />
-            <TextArea
-                value={text}
-                onChangeText={(value) => setText(value)}
-                label="Review"
-                placeholder="Write a review"
-            />
-            <View style={styles.photoContainer}>
-                <IconButton name="camera" onPress={onPickImage} color="#ccc" />
-                {!!imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-            </View>
-            <Button text="Post a review" onPress={onSubmit} />
+            <ScrollView>
+                <StarInput score={score} onChangeScore={(value) => setScore(value)} />
+                <TextArea
+                    value={text}
+                    onChangeText={(value) => setText(value)}
+                    label="Review"
+                    placeholder="Write a review"
+                />
+                <View style={styles.photoContainer}>
+                    <IconButton name="camera" onPress={onPickImage} color="#ccc" />
+                    {!!imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+                </View>
+                <Button text="Post a review" onPress={onSubmit} />
+                <Loading visible={loading} />
+            </ScrollView>
         </SafeAreaView>
     );
 };
