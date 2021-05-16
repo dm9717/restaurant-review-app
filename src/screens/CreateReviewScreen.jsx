@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { StyleSheet, SafeAreaView, Text, View, Image, Alert, ScrollView } from 'react-native';
+import { StyleSheet, SafeAreaView, View, Image, Alert, ScrollView } from 'react-native';
 import { IconButton } from '../components/IconButton';
 import { TextArea } from '../components/TextArea';
 import { StarInput } from '../components/StarInput';
 import { Button } from '../components/Button';
 import { createReviewRef, uploadImage } from '../lib/firebase';
 import { UserContext } from '../contexts/userContext';
-import firebase, { storage } from 'firebase';
+import firebase from 'firebase';
 import { pickImage } from '../lib/image-picker';
 import { getExtension } from '../utils/file';
 import { Loading } from '../components/Loading';
+import { ReviewsContext } from '../contexts/reviewsContext';
 
 export const CreateReviewScreen = ({ navigation, route }) => {
     const { shop } = route.params;
@@ -18,6 +19,7 @@ export const CreateReviewScreen = ({ navigation, route }) => {
     const [score, setScore] = useState(3);
     const [imageUri, setImageUri] = useState('');
     const [loading, setLoading] = useState(false);
+    const { reviews, setReviews } = useContext(ReviewsContext);
 
     useEffect(() => {
         navigation.setOptions({
@@ -34,7 +36,7 @@ export const CreateReviewScreen = ({ navigation, route }) => {
 
         setLoading(true);
 
-        // Get the ID of the document
+        // Add a new document with a generated id.
         const reviewDocRef = await createReviewRef(shop.id);
         // Set the path of an image on Cloud Storage
         const ext = getExtension(imageUri);
@@ -44,6 +46,7 @@ export const CreateReviewScreen = ({ navigation, route }) => {
         // Make a Review document
 
         const review = {
+            id: reviewDocRef.id,
             user: {
                 name: user.name,
                 id: user.id,
@@ -58,7 +61,9 @@ export const CreateReviewScreen = ({ navigation, route }) => {
             updatedAt: firebase.firestore.Timestamp.now(),
             createdAt: firebase.firestore.Timestamp.now(),
         };
+        // Behind the scenes, .add(...) and .doc().set(...) are completely equivalent, so you can use whichever is more convenient.
         await reviewDocRef.set(review);
+        setReviews([review, ...reviews]);
         setLoading(false);
         navigation.goBack();
     };
@@ -70,21 +75,19 @@ export const CreateReviewScreen = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView>
-                <StarInput score={score} onChangeScore={(value) => setScore(value)} />
-                <TextArea
-                    value={text}
-                    onChangeText={(value) => setText(value)}
-                    label="Review"
-                    placeholder="Write a review"
-                />
-                <View style={styles.photoContainer}>
-                    <IconButton name="camera" onPress={onPickImage} color="#ccc" />
-                    {!!imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-                </View>
-                <Button text="Post a review" onPress={onSubmit} />
-                <Loading visible={loading} />
-            </ScrollView>
+            <StarInput score={score} onChangeScore={(value) => setScore(value)} />
+            <TextArea
+                value={text}
+                onChangeText={(value) => setText(value)}
+                label="Review"
+                placeholder="Write a review"
+            />
+            <View style={styles.photoContainer}>
+                <IconButton name="camera" onPress={onPickImage} color="#ccc" />
+                {!!imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+            </View>
+            <Button text="Post a review" onPress={onSubmit} />
+            <Loading visible={loading} />
         </SafeAreaView>
     );
 };

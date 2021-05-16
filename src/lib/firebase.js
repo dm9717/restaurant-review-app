@@ -10,13 +10,13 @@ if (!firebase.apps.length) {
 }
 
 export const getShops = async () => {
-    const snapshot = await firebase
+    const shopDoc = await firebase
         .firestore()
         .collection('shops')
         // .where('score', '>', 3)
         .orderBy('score', 'desc')
         .get();
-    const shops = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+    const shops = shopDoc.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
     return shops;
 };
 
@@ -48,6 +48,7 @@ export const updateUser = async (userId, params) => {
 };
 
 export const createReviewRef = async (shopId) => {
+    // In some cases, it can be useful to create a document reference with an auto-generated ID, then use the reference later. For this use case, you can call doc():
     return await firebase.firestore().collection('shops').doc(shopId).collection('reviews').doc();
 };
 
@@ -66,4 +67,15 @@ export const uploadImage = async (uri, path) => {
         console.log(err);
     }
     return downloadUrl;
+};
+
+export const getReviews = async (shopId) => {
+    const reviewDocs = await firebase
+        .firestore()
+        .collection('shops')
+        .doc(shopId)
+        .collection('reviews')
+        .orderBy('createdAt', 'desc')
+        .get();
+    return reviewDocs.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
 };
