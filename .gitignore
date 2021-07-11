@@ -1,13 +1,13 @@
-restaurant-review-app/node_modules/**/*
-restaurant-review-app/.expo/*
-restaurant-review-app/npm-debug.*
+**/node_modules/**/*
+**/.expo/*
+**/npm-debug.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
-restaurant-review-app/web-build/
+**/web-build/
 
 # macOS
 .DS_Store
